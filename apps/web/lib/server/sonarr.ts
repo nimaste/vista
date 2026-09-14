@@ -224,10 +224,15 @@ export const sonarr = {
       signal: AbortSignal.timeout(60_000),
     }),
 
-  pushRelease: async (release: Pick<SonarrRelease, "guid" | "indexerId">): Promise<void> => {
+  // Sonarr's /release/push wants the *entire* release object back exactly
+  // as /release returned it -- guid/indexerId alone gets rejected with
+  // "Title/DownloadUrl/MagnetUrl/Protocol/PublishDate must not be empty."
+  // The client round-trips the whole object it received from getReleases,
+  // same as Sonarr's own web UI does.
+  pushRelease: async (release: unknown): Promise<void> => {
     await sonarrFetch<void>("/release/push", {
       method: "POST",
-      body: JSON.stringify({ guid: release.guid, indexerId: release.indexerId }),
+      body: JSON.stringify(release),
     });
   },
 

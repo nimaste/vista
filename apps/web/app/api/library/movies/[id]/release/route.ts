@@ -22,16 +22,17 @@ export const GET = async (_req: Request, ctx: { params: { id: string } }) => {
   }
 };
 
-// Grabs (downloads) a specific release chosen from GET's results.
+// Grabs a release chosen from GET's results. The body is the *entire*
+// release object as GET returned it -- Radarr's own /release/push needs the
+// full thing (title, downloadUrl/magnetUrl, protocol, publishDate, etc.),
+// not just guid/indexerId.
 export const POST = async (req: NextRequest) => {
   if (!(await requireUserForRoute())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const guid = body.guid as string | undefined;
-  const indexerId = body.indexerId as number | undefined;
-  if (!guid || typeof indexerId !== "number")
-    return NextResponse.json({ error: "guid and indexerId are required" }, { status: 400 });
+  if (!body || typeof body !== "object" || !("guid" in body))
+    return NextResponse.json({ error: "A full release object is required" }, { status: 400 });
   try {
-    await radarr.pushRelease({ guid, indexerId });
+    await radarr.pushRelease(body);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(
