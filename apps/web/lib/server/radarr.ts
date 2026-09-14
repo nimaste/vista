@@ -131,9 +131,6 @@ export const radarr = {
   getMovie: (id: number) =>
     radarrFetch<RadarrMovie>(`/movie/${id}`),
 
-  lookupByTmdbId: (tmdbId: number) =>
-    radarrFetch<RadarrMovie[]>(`/movie/lookup?term=tmdb:${tmdbId}`),
-
   // Free-text search for the "add a new movie" flow.
   searchMovies: (term: string) =>
     radarrFetch<RadarrMovie[]>(`/movie/lookup?term=${encodeURIComponent(term)}`),

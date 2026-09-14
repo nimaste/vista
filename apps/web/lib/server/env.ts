@@ -15,7 +15,6 @@ const schema = z.object({
       if (v === "false" || v === "0") return false;
       throw new Error(`COOKIE_SECURE must be 'true' or 'false', got '${v}'`);
     }),
-  TMDB_API_KEY: z.string().optional().default(""),
 });
 
 type Env = z.infer<typeof schema>;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Film, Key, Loader2, Plus, Trash2 } from "lucide-react";
+import { Copy, Key, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ type TokenRow = {
   createdAt: string;
 };
 
-export const TokensClient = ({ initial, tmdbKeyMasked, hasTmdbKey }: { initial: TokenRow[]; tmdbKeyMasked: string; hasTmdbKey: boolean }) => {
+export const TokensClient = ({ initial }: { initial: TokenRow[] }) => {
   const router = useRouter();
   const [tokens, setTokens] = useState(initial);
   const [creating, setCreating] = useState(false);
@@ -50,9 +50,7 @@ export const TokensClient = ({ initial, tmdbKeyMasked, hasTmdbKey }: { initial: 
 
   return (
     <div className="grid gap-6">
-      <TmdbKeySection initialMasked={tmdbKeyMasked} initialHasKey={hasTmdbKey} />
-
-      <div className="border-t pt-6">
+      <div>
         <h2 className="mb-4 text-lg font-semibold">Bearer Tokens</h2>
         <Card>
           <CardContent className="py-4 text-sm text-muted-foreground">
@@ -223,74 +221,5 @@ const CreateDialog = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-};
-
-const TmdbKeySection = ({ initialMasked, initialHasKey }: { initialMasked: string; initialHasKey: boolean }) => {
-  const [key, setKey] = useState("");
-  const [masked, setMasked] = useState(initialMasked);
-  const [hasKey, setHasKey] = useState(initialHasKey);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const save = async () => {
-    if (!key.trim()) return;
-    setSaving(true);
-    setError(null);
-    setSaved(false);
-    try {
-      await apiClient("/settings/tmdb", {
-        method: "PUT",
-        body: JSON.stringify({ tmdbApiKey: key.trim() }),
-      });
-      setMasked(`${key.trim().slice(0, 6)}…${key.trim().slice(-4)}`);
-      setHasKey(true);
-      setKey("");
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div>
-      <h2 className="mb-4 text-lg font-semibold">TMDB API Key</h2>
-      <Card>
-        <CardContent className="py-4">
-          <div className="mb-4 text-sm text-muted-foreground">
-            Required for Discover, search, and library metadata. Get a free key at{" "}
-            <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="text-primary underline">
-              themoviedb.org/settings/api
-            </a>.
-          </div>
-          <div className="flex items-end gap-3">
-            <div className="flex-1 grid gap-2">
-              <Label htmlFor="tmdb-key">API Key (v3 auth)</Label>
-              <Input
-                id="tmdb-key"
-                type="password"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                placeholder={hasKey ? masked : "Enter your TMDB API key"}
-              />
-            </div>
-            <Button onClick={save} disabled={saving || !key.trim()} className="gap-2">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Film className="h-4 w-4" />}
-              {saving ? "Saving…" : saved ? "Saved" : "Save"}
-            </Button>
-          </div>
-          {hasKey && !key ? (
-            <div className="mt-2 flex items-center gap-2 text-xs text-green-500">
-              <Check className="h-3.5 w-3.5" /> TMDB key configured ({masked})
-            </div>
-          ) : null}
-          {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
-        </CardContent>
-      </Card>
-    </div>
   );
 };

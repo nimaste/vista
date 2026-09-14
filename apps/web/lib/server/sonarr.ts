@@ -145,29 +145,12 @@ export type SonarrAddOptions = {
   addOptions?: { searchForMissingEpisodes?: boolean };
 };
 
-const resolveImageUrl = async (
-  images: { coverType: string; remoteUrl?: string; url?: string }[] | undefined,
-  coverType: string,
-): Promise<string | null> => {
-  if (!images) return null;
-  const img = images.find((i) => i.coverType === coverType);
-  if (!img) return null;
-  if (img.remoteUrl && img.remoteUrl.includes("tmdb.org")) return img.remoteUrl;
-  if (img.url) {
-    const cfg = await getConfig();
-    if (cfg) return `${cfg.url}${img.url}&apikey=${cfg.apiKey}`;
-  }
-  return img.remoteUrl ?? null;
-};
-
 // -- Exported API --
 
 export const sonarr = {
   isConfigured: async (): Promise<boolean> => {
     return (await getConfig()) !== null;
   },
-
-  resolveImageUrl,
 
   testConnection: async (): Promise<{ ok: boolean; message: string }> => {
     try {
@@ -186,9 +169,6 @@ export const sonarr = {
 
   getEpisodes: (seriesId: number) =>
     sonarrFetch<SonarrEpisodeDetail[]>(`/episode?seriesId=${seriesId}&includeEpisodeFile=true`),
-
-  lookupByTvdbId: (tvdbId: number) =>
-    sonarrFetch<SonarrSeries[]>(`/series/lookup?term=tvdb:${tvdbId}`),
 
   // Free-text search for the "add a new show" flow -- Sonarr's own lookup
   // already resolves title text straight to tvdbId, no separate TMDB

@@ -2,7 +2,7 @@
   "name": "vista",
   "version": "0.1.0",
   "private": true,
-  "description": "Vista — unified TV/movies library manager, indexer, downloader, and request platform",
+  "description": "Vista — a portal to Sonarr, Radarr, Overseerr/Jellyseerr, NZBGet, and SABnzbd from outside your LAN",
   "packageManager": "pnpm@9.12.0",
   "engines": {
     "node": ">=20.11.0"

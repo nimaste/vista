@@ -2,9 +2,7 @@ name: vista
 
 services:
   vista:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: ghcr.io/nimaste/vista:latest
     container_name: vista
     restart: unless-stopped
     environment:
@@ -16,13 +14,11 @@ services:
       # Generate a real one with: openssl rand -hex 32  (32+ chars minimum).
       JWT_SECRET: CHANGE_ME_32_plus_random_characters_replace_this_value_before_first_run
 
-      # URL users hit in their browser. COOKIE_SECURE is derived from the protocol when blank.
-      PUBLIC_WEB_URL: http://deathstar.local:3456
-      COOKIE_SECURE: ""
-
-      # TMDB API key is now set in the web UI: Settings → API Tokens.
-      # Env var still works as fallback if set.
-      # TMDB_API_KEY: ""
+      # URL native clients and the web admin UI hit from outside the LAN, via
+      # Caddy's mTLS-protected vista.{your domain} site block. COOKIE_SECURE
+      # is derived from the protocol when blank.
+      PUBLIC_WEB_URL: CHANGE_ME_to_https://vista.your-domain
+      COOKIE_SECURE: "true"
     volumes:
       # Vista's state (SQLite database + any future app config).
       - /mnt/cache/appdata/vista/config:/config

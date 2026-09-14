@@ -1,21 +1,15 @@
 # Vista
 
-A portal, not a reimplementation. Vista sits in front of your Sonarr, Radarr,
-Overseerr/Jellyseerr, NZBGet, and SABnzbd instances and gives you one account,
-one mTLS cert, and one clean interface — on iOS, tvOS, Android, and Android TV
-— to manage all of them from outside your LAN.
-
-Vista's backend never re-derives or duplicates those services' own decisions
-(quality profiles, root folders, request approval). It only ever calls out to
-them and displays the result.
+Vista gives you one account, one mTLS certificate, and one interface — on
+iOS, tvOS, Android, and Android TV — to manage your Sonarr, Radarr,
+Overseerr/Jellyseerr, NZBGet, and SABnzbd from anywhere, not just your LAN.
 
 ## What it does
 
 - **Sonarr / Radarr** — browse your library by season/episode, add new
   shows/movies, delete, run an interactive search (also how you grab an
   upgrade), and see the calendar. Quality profile and root folder choices
-  always come from Sonarr/Radarr's own live configuration, never stored by
-  Vista.
+  always come from Sonarr/Radarr's own live configuration.
 - **Overseerr / Jellyseerr** — browse, search, and request. Vista submits the
   request to Overseerr, which hands it off to Radarr/Sonarr itself — approval
   stays in Overseerr's own admin UI.
@@ -53,19 +47,18 @@ apps.
 - **Deploy:** single Docker container, published to
   `ghcr.io/nimaste/vista` on every tagged release.
 
-## Running locally
+## Running it
 
 ```bash
-cp .env.example .env
-# edit .env -- at minimum set JWT_SECRET:
-#   openssl rand -hex 32
-
-docker compose up --build
+docker compose up -d
 ```
 
-Open the configured port — first visit prompts you to create the admin
-account, then go to Settings → Connections to point Vista at your Sonarr,
-Radarr, Overseerr/Jellyseerr, NZBGet, and/or SABnzbd instances.
+Pulls `ghcr.io/nimaste/vista:latest`. Edit `docker-compose.yml` first: set a
+real `JWT_SECRET` (32+ random characters, e.g. `openssl rand -hex 32`) and
+`PUBLIC_WEB_URL` (the address you'll actually reach Vista at). First visit
+prompts you to create the admin account, then go to Settings → Connections
+to point Vista at your Sonarr, Radarr, Overseerr/Jellyseerr, NZBGet, and/or
+SABnzbd instances.
 
 ## Repo layout
 

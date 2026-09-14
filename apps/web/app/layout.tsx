@@ -10,7 +10,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Vista",
-  description: "Unified TV shows + movies library, indexer, downloader, and request platform",
+  description: "Portal to Sonarr, Radarr, Overseerr/Jellyseerr, NZBGet, and SABnzbd",
   icons: {
     icon: [
       { url: "/vista-icon.png", type: "image/png" },

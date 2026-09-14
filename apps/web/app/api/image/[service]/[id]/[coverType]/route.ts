@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/server/db";
+import { getConnection } from "@/lib/server/connections";
 
 type ServiceConfig = { url: string; apiKey: string };
 
@@ -7,11 +7,9 @@ const validServices = new Set(["sonarr", "radarr"]);
 const validCoverTypes = new Set(["poster", "fanart"]);
 
 const getServiceConfig = async (service: string): Promise<ServiceConfig | null> => {
-  const row = await prisma.setting.findUnique({ where: { key: service } });
-  if (!row) return null;
-  const val = JSON.parse(row.value) as Partial<ServiceConfig>;
-  if (!val.url || !val.apiKey) return null;
-  return { url: val.url.replace(/\/+$/, ""), apiKey: val.apiKey };
+  const conn = await getConnection(service.toUpperCase() as "SONARR" | "RADARR");
+  if (!conn || !conn.apiKey) return null;
+  return { url: conn.baseUrl.replace(/\/+$/, ""), apiKey: conn.apiKey };
 };
 
 export const GET = async (
