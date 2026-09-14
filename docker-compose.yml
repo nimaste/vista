@@ -1,0 +1,36 @@
+name: vista
+
+services:
+  vista:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: vista
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: file:/config/vista.db
+
+      # Generate a real one with: openssl rand -hex 32  (32+ chars minimum).
+      JWT_SECRET: CHANGE_ME_32_plus_random_characters_replace_this_value_before_first_run
+
+      # URL users hit in their browser. COOKIE_SECURE is derived from the protocol when blank.
+      PUBLIC_WEB_URL: http://deathstar.local:3456
+      COOKIE_SECURE: ""
+
+      # TMDB API key is now set in the web UI: Settings → API Tokens.
+      # Env var still works as fallback if set.
+      # TMDB_API_KEY: ""
+    volumes:
+      # Vista's state (SQLite database + any future app config).
+      - /mnt/cache/appdata/vista/config:/config
+    ports:
+      - "3456:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

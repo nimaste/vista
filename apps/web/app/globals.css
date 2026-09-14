@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light main canvas. */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 217 91% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 222 47% 20%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 94%;
+    --accent-foreground: 222 47% 20%;
+    --destructive: 0 75% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 217 91% 55%;
+    --radius: 0.65rem;
+
+    /* Sidebar island — dark Gemini blue with primary accent. */
+    --sidebar: 222 47% 14%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-muted: 215 20% 75%;
+    --sidebar-border: 222 30% 22%;
+    --sidebar-accent: 217 60% 26%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-primary: 217 91% 62%;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "cv11" 1;
+  }
+}

@@ -1,0 +1,97 @@
+// Vista — single-container SQLite schema.
+// JSON columns are stored as TEXT strings (app layer does parse/stringify).
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Users / auth ----------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String
+  role          String    @default("USER") // ADMIN | USER
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  apiTokens      ApiToken[]
+  notifications  Notification[]
+}
+
+// API tokens for mobile / TV clients. The raw token is shown only at creation;
+// we store a SHA-256 hash for lookup + a short prefix for display.
+model ApiToken {
+  id         String    @id @default(cuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  prefix     String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ---------- Notifications ----------
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+// ---------- Key-value settings ----------
+
+model Setting {
+  key       String   @id
+  // JSON string
+  value     String   @default("null")
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- Connected services (Sonarr/Radarr/Overseerr/NZBGet/SABnzbd) ----------
+// Replaces the old single-instance Setting{key:"sonarr"|"radarr"} blobs.
+// One active connection per service type for now (see migrate-server-connections.ts
+// for the one-time migration off the old Setting rows) -- @@unique([serviceType])
+// is the only thing enforcing that; relaxing to multi-instance later is a one-line change.
+
+// SQLite has no native enum support in Prisma -- plain String + TS union
+// type instead, same convention as User.role above.
+// Valid values: SONARR | RADARR | OVERSEERR | NZBGET | SABNZBD
+
+model ServerConnection {
+  id           String      @id @default(cuid())
+  serviceType  String      // SONARR | RADARR | OVERSEERR | NZBGET | SABNZBD
+  name         String?
+  baseUrl      String
+  // Encrypted at rest (see lib/server/crypto.ts) -- Sonarr/Radarr/Overseerr/SABnzbd
+  // use apiKey; NZBGet uses username/password (HTTP Basic, not URL-embedded creds).
+  apiKey       String?
+  username     String?
+  password     String?
+  enabled      Boolean     @default(true)
+  lastTestedAt DateTime?
+  lastTestOk   Boolean?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([serviceType])
+}
