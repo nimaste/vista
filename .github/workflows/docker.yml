@@ -27,7 +27,10 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN can't write a brand-new GHCR package's first-ever
+          # push on this account -- GHCR_PAT is a personal token with
+          # write:packages scope, stored as a repo secret.
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Extract metadata
         id: meta
