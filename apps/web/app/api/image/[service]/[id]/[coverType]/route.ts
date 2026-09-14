@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
+import { LRUCache } from "lru-cache";
 import { getConnection } from "@/lib/server/connections";
 
 type ServiceConfig = { url: string; apiKey: string };
 
 const validServices = new Set(["sonarr", "radarr"]);
 const validCoverTypes = new Set(["poster", "fanart"]);
+
+// Sonarr/Radarr posters get requested on every Library grid render -- every
+// item, every time. Cache the actual image bytes here (not just metadata) so
+// repeat loads skip the Sonarr/Radarr round-trip entirely instead of only
+// benefiting from the client's own HTTP cache on a cold app launch.
+type CachedImage = { data: Buffer; contentType: string };
+const imageCache = new LRUCache<string, CachedImage>({
+  max: 300,
+  ttl: 1000 * 60 * 60, // 1 hour -- posters change rarely, this just bounds staleness
+});
 
 const getServiceConfig = async (service: string): Promise<ServiceConfig | null> => {
   const conn = await getConnection(service.toUpperCase() as "SONARR" | "RADARR");
@@ -29,6 +40,15 @@ export const GET = async (
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 
+  const cacheKey = `${service}:${numericId}:${coverType}`;
+  const cached = imageCache.get(cacheKey);
+  if (cached) {
+    return new NextResponse(new Uint8Array(cached.data), {
+      status: 200,
+      headers: { "Content-Type": cached.contentType, "Cache-Control": "public, max-age=86400" },
+    });
+  }
+
   const cfg = await getServiceConfig(service);
   if (!cfg) {
     return NextResponse.json({ error: `${service} not configured` }, { status: 503 });
@@ -43,8 +63,10 @@ export const GET = async (
     }
 
     const contentType = upstream.headers.get("content-type") || "image/jpeg";
+    const data = Buffer.from(await upstream.arrayBuffer());
+    imageCache.set(cacheKey, { data, contentType });
 
-    return new NextResponse(upstream.body, {
+    return new NextResponse(new Uint8Array(data), {
       status: 200,
       headers: {
         "Content-Type": contentType,

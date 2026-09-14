@@ -17,8 +17,8 @@ export default async function TokensPage() {
   return (
     <>
       <PageHeader
-        title="API Tokens"
-        description="Bearer tokens for Vista's mobile and TV apps. Treat these like passwords."
+        title="Devices"
+        description="Devices signed in to your account."
       />
       <TokensClient
         initial={tokens.map((t) => ({

@@ -6,7 +6,7 @@ import { UsersClient } from "./users-client";
 export default async function UsersPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "ADMIN") redirect("/login");
+  if (user.role !== "ADMIN") redirect("/settings/tokens");
 
   return (
     <div className="space-y-6">

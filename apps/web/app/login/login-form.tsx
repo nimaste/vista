@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+type LoginResponse = { user: { role: "ADMIN" | "USER" } };
+
 export const LoginForm = () => {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
@@ -19,11 +21,11 @@ export const LoginForm = () => {
     setPending(true);
     setError(null);
     try {
-      await apiClient("/auth/login", {
+      const { user } = await apiClient<LoginResponse>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ identifier, password }),
       });
-      router.replace("/discover");
+      router.replace(user.role === "ADMIN" ? "/settings/connections" : "/settings/tokens");
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Sign-in failed");

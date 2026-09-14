@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
-  if (user) redirect("/settings/connections");
+  if (user) redirect(user.role === "ADMIN" ? "/settings/connections" : "/settings/tokens");
 
   const status = await getAuthStatus();
   if (status.firstRun) redirect("/setup");

@@ -25,11 +25,17 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-const NAV: NavItem[] = [
+const ADMIN_NAV: NavItem[] = [
   { href: "/settings/connections", label: "Connections", icon: LinkIcon },
   { href: "/settings/users", label: "Users", icon: Users },
-  { href: "/settings/tokens", label: "API Tokens", icon: Key },
+  { href: "/settings/tokens", label: "Devices", icon: Key },
   { href: "/settings/backup", label: "Backup and Restore", icon: DatabaseBackup },
+];
+
+// Non-admins can only see/manage their own device sessions -- every other
+// page here is admin-only and would just bounce them right back.
+const USER_NAV: NavItem[] = [
+  { href: "/settings/tokens", label: "Devices", icon: Key },
 ];
 
 type CurrentUser = {
@@ -42,6 +48,8 @@ type CurrentUser = {
 export const Sidebar = ({ user }: { user: CurrentUser }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const homeHref = user.role === "ADMIN" ? "/settings/connections" : "/settings/tokens";
+  const nav = user.role === "ADMIN" ? ADMIN_NAV : USER_NAV;
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifications, setNotifications] = useState<{ id: string; title: string; message: string; read: boolean; link: string | null; createdAt: string }[]>([]);
@@ -97,14 +105,14 @@ export const Sidebar = ({ user }: { user: CurrentUser }) => {
   return (
     <aside className="hidden w-60 fixed inset-y-0 left-0 z-30 md:flex md:flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-        <Link href="/settings/connections" aria-label="Vista home">
+        <Link href={homeHref} aria-label="Vista home">
           <Logo />
         </Link>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3">
         <div className="space-y-1">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
@@ -183,7 +191,7 @@ export const Sidebar = ({ user }: { user: CurrentUser }) => {
                     notifications.map((n) => (
                       <Link
                         key={n.id}
-                        href={n.link ?? "/settings/connections"}
+                        href={n.link ?? homeHref}
                         onClick={() => setShowNotifs(false)}
                         className={cn(
                           "block border-b border-sidebar-border/50 px-3 py-2 text-xs transition-colors hover:bg-sidebar-accent/40 last:border-0",

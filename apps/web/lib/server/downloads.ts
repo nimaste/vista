@@ -17,11 +17,24 @@ export type DownloadItem = {
   timestamp?: number;
 };
 
+const log = (...args: unknown[]) => {
+  // eslint-disable-next-line no-console
+  console.error("[downloads]", ...args);
+};
+
 export const downloads = {
   getQueue: async (): Promise<DownloadItem[]> => {
+    // Each source is isolated -- a broken NZBGet connection shouldn't also
+    // hide SABnzbd's (working) results, or vice versa.
     const [nzbgetItems, sabnzbdItems] = await Promise.all([
-      nzbget.isConfigured().then((ok) => (ok ? nzbget.listQueue() : [])),
-      sabnzbd.isConfigured().then((ok) => (ok ? sabnzbd.listQueue() : [])),
+      nzbget.isConfigured().then((ok) => (ok ? nzbget.listQueue() : [])).catch((err) => {
+        log("nzbget queue failed:", err);
+        return [];
+      }),
+      sabnzbd.isConfigured().then((ok) => (ok ? sabnzbd.listQueue() : [])).catch((err) => {
+        log("sabnzbd queue failed:", err);
+        return [];
+      }),
     ]);
 
     const fromNzbget: DownloadItem[] = nzbgetItems.map((i) => ({
@@ -49,8 +62,14 @@ export const downloads = {
 
   getHistory: async (): Promise<DownloadItem[]> => {
     const [nzbgetItems, sabnzbdItems] = await Promise.all([
-      nzbget.isConfigured().then((ok) => (ok ? nzbget.listHistory() : [])),
-      sabnzbd.isConfigured().then((ok) => (ok ? sabnzbd.listHistory() : [])),
+      nzbget.isConfigured().then((ok) => (ok ? nzbget.listHistory() : [])).catch((err) => {
+        log("nzbget history failed:", err);
+        return [];
+      }),
+      sabnzbd.isConfigured().then((ok) => (ok ? sabnzbd.listHistory() : [])).catch((err) => {
+        log("sabnzbd history failed:", err);
+        return [];
+      }),
     ]);
 
     const fromNzbget: DownloadItem[] = nzbgetItems.map((i) => ({
