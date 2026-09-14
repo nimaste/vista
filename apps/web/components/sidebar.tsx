@@ -45,7 +45,7 @@ type CurrentUser = {
   role: "ADMIN" | "USER";
 };
 
-export const Sidebar = ({ user }: { user: CurrentUser }) => {
+export const Sidebar = ({ user, version }: { user: CurrentUser; version: string }) => {
   const pathname = usePathname();
   const router = useRouter();
   const homeHref = user.role === "ADMIN" ? "/settings/connections" : "/settings/tokens";
@@ -218,6 +218,7 @@ export const Sidebar = ({ user }: { user: CurrentUser }) => {
             <LogOut className="h-4 w-4" />
           </button>
         </div>
+        <div className="px-2 pb-1 pt-2 text-center text-[10px] text-sidebar-muted">v{version}</div>
       </div>
     </aside>
   );
