@@ -177,13 +177,19 @@ export const radarr = {
       signal: AbortSignal.timeout(60_000),
     }),
 
-  // Radarr's /release/push wants the *entire* release object back exactly
-  // as /release returned it -- guid/indexerId alone gets rejected with
-  // "Title/DownloadUrl/MagnetUrl/Protocol/PublishDate must not be empty."
-  // The client round-trips the whole object it received from getReleases,
-  // same as Radarr's own web UI does.
+  // POST /release -- the real "grab this specific search result" action,
+  // confirmed directly against a live Radarr instance: this is what
+  // Radarr's own web UI actually calls, and it's what lets a rejected
+  // release through the same way the UI does. Deliberately NOT
+  // /release/push -- that's a different endpoint (importing an external,
+  // unsolicited NZB/torrent) that re-runs full rejection evaluation and
+  // silently drops anything Radarr's own quality profile still rejects,
+  // which is why grabbing appeared to succeed but nothing ever reached
+  // NZBGet. The full release object is required either way -- guid/
+  // indexerId alone gets rejected with "Title/DownloadUrl/MagnetUrl/
+  // Protocol/PublishDate must not be empty."
   pushRelease: async (release: unknown): Promise<void> => {
-    await radarrFetch<void>("/release/push", {
+    await radarrFetch<void>("/release", {
       method: "POST",
       body: JSON.stringify(release),
     });

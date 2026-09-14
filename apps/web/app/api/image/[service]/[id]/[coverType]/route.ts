@@ -11,10 +11,18 @@ const validCoverTypes = new Set(["poster", "fanart"]);
 // item, every time. Cache the actual image bytes here (not just metadata) so
 // repeat loads skip the Sonarr/Radarr round-trip entirely instead of only
 // benefiting from the client's own HTTP cache on a cold app launch.
+//
+// Deliberately buffers the whole image before caching+responding, rather
+// than tee()-ing the stream into a background cache-population promise --
+// an earlier version tried that for lower first-load latency, but an
+// unawaited background promise in a route handler isn't a reliable place to
+// do real work, and the cache wasn't actually filling. A few hundred KB
+// buffered synchronously is a small, predictable cost; a cache that doesn't
+// reliably populate isn't a cache.
 type CachedImage = { data: Buffer; contentType: string };
 const imageCache = new LRUCache<string, CachedImage>({
-  max: 300,
-  ttl: 1000 * 60 * 60, // 1 hour -- posters change rarely, this just bounds staleness
+  max: 500,
+  ttl: 1000 * 60 * 60 * 24, // 24h, matching the Cache-Control header below -- posters essentially never change
 });
 
 const getServiceConfig = async (service: string): Promise<ServiceConfig | null> => {
@@ -58,23 +66,15 @@ export const GET = async (
 
   try {
     const upstream = await fetch(imageUrl);
-    if (!upstream.ok || !upstream.body) {
+    if (!upstream.ok) {
       return new NextResponse(null, { status: 404 });
     }
 
     const contentType = upstream.headers.get("content-type") || "image/jpeg";
+    const data = Buffer.from(await upstream.arrayBuffer());
+    imageCache.set(cacheKey, { data, contentType });
 
-    // Stream straight through to the client (first-load latency matters --
-    // buffering the whole image before responding, as an earlier version of
-    // this route did, made every never-before-seen poster slower, not
-    // faster). Tee the same bytes into the cache in the background so the
-    // *next* request for this image skips Sonarr/Radarr entirely.
-    const [clientStream, cacheStream] = upstream.body.tee();
-    new Response(cacheStream).arrayBuffer()
-      .then((buf) => imageCache.set(cacheKey, { data: Buffer.from(buf), contentType }))
-      .catch(() => {});
-
-    return new NextResponse(clientStream, {
+    return new NextResponse(new Uint8Array(data), {
       status: 200,
       headers: {
         "Content-Type": contentType,

@@ -224,13 +224,19 @@ export const sonarr = {
       signal: AbortSignal.timeout(60_000),
     }),
 
-  // Sonarr's /release/push wants the *entire* release object back exactly
-  // as /release returned it -- guid/indexerId alone gets rejected with
+  // POST /release -- the real "grab this specific search result" action,
+  // confirmed directly against a live Radarr instance and against Sonarr's
+  // own frontend source: this is what Sonarr's web UI actually calls, and
+  // it's what lets a rejected release through the same way the UI does.
+  // Deliberately NOT /release/push -- that's a different endpoint
+  // (importing an external, unsolicited NZB/torrent) that re-runs full
+  // rejection evaluation and silently drops anything Sonarr's own quality
+  // profile still rejects, which is why grabbing appeared to succeed but
+  // nothing ever reached the download client. The full release object is
+  // required either way -- guid/indexerId alone gets rejected with
   // "Title/DownloadUrl/MagnetUrl/Protocol/PublishDate must not be empty."
-  // The client round-trips the whole object it received from getReleases,
-  // same as Sonarr's own web UI does.
   pushRelease: async (release: unknown): Promise<void> => {
-    await sonarrFetch<void>("/release/push", {
+    await sonarrFetch<void>("/release", {
       method: "POST",
       body: JSON.stringify(release),
     });
