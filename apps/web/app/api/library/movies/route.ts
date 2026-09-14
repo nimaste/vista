@@ -16,8 +16,6 @@ export const GET = async () => {
   try {
     const raw = await radarr.listMovies();
     const movies: LibraryMovie[] = raw.map((m) => {
-      const poster = m.images?.find((i) => i.coverType === "poster");
-      const fanart = m.images?.find((i) => i.coverType === "fanart");
       return {
         id: String(m.id),
         tmdbId: m.tmdbId,
@@ -25,8 +23,12 @@ export const GET = async () => {
         overview: m.overview ?? null,
         year: m.year ?? null,
         runtime: m.runtime ?? null,
-        posterPath: poster?.remoteUrl ?? null,
-        backdropPath: fanart?.remoteUrl ?? null,
+        // Proxied through Vista (and cached there), same as TV posters --
+        // not Radarr's own remoteUrl, which is often unpopulated and, even
+        // when set, bypasses Vista's cache entirely by pointing straight at
+        // an external host.
+        posterPath: `/api/image/radarr/${m.id}/poster`,
+        backdropPath: `/api/image/radarr/${m.id}/fanart`,
         monitored: m.monitored,
         hasFile: m.hasFile,
         filePath: m.movieFile?.path ?? null,

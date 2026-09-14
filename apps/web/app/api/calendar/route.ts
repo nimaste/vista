@@ -18,12 +18,13 @@ export const GET = async (req: NextRequest) => {
   ]);
 
   const episodes = sonarrCal.map((e) => {
-    const poster = e.series?.images?.find((i) => i.coverType === "poster");
     return {
       id: String(e.id),
       seriesId: String(e.seriesId),
       seriesTitle: e.series?.title ?? "",
-      posterPath: poster?.remoteUrl ?? null,
+      // Proxied through Vista (and cached there), same as the Library tab --
+      // not Sonarr's own remoteUrl, which bypasses Vista's cache entirely.
+      posterPath: e.seriesId ? `/api/image/sonarr/${e.seriesId}/poster` : null,
       seasonNumber: e.seasonNumber,
       episodeNumber: e.episodeNumber,
       episodeTitle: e.title,
@@ -34,13 +35,13 @@ export const GET = async (req: NextRequest) => {
   });
 
   const movies = radarrCal.map((m) => {
-    const poster = m.images?.find((i) => i.coverType === "poster");
     return {
       id: String(m.id),
       title: m.title,
       year: m.year,
       releaseDate: m.digitalRelease ?? m.physicalRelease ?? m.inCinemas ?? null,
-      posterPath: poster?.remoteUrl ?? null,
+      // Proxied through Vista (and cached there), same as the Library tab.
+      posterPath: `/api/image/radarr/${m.id}/poster`,
       hasFile: m.hasFile,
     };
   });

@@ -10,8 +10,6 @@ export const GET = async (_req: Request, ctx: { params: { id: string } }) => {
   if (!Number.isInteger(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   try {
     const movie = await radarr.getMovie(id);
-    const poster = movie.images?.find((i) => i.coverType === "poster");
-    const fanart = movie.images?.find((i) => i.coverType === "fanart");
     return NextResponse.json({
       movie: {
         id: String(movie.id),
@@ -20,8 +18,9 @@ export const GET = async (_req: Request, ctx: { params: { id: string } }) => {
         overview: movie.overview ?? null,
         year: movie.year ?? null,
         runtime: movie.runtime ?? null,
-        posterPath: poster?.remoteUrl ?? null,
-        backdropPath: fanart?.remoteUrl ?? null,
+        // Proxied through Vista (and cached there), same as TV posters.
+        posterPath: `/api/image/radarr/${movie.id}/poster`,
+        backdropPath: `/api/image/radarr/${movie.id}/fanart`,
         monitored: movie.monitored,
         hasFile: movie.hasFile,
         filePath: movie.movieFile?.path ?? null,
