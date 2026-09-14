@@ -60,6 +60,8 @@ apps/android-tv/app/release.jks
 # Config volume (NAS deploy)
 config/
 
-# Local media test dirs
-media/
-downloads/
+# Local media test dirs (repo root only -- unanchored patterns here would
+# also match apps/web/app/api/downloads/, a real route directory, which is
+# exactly the bug that silently kept Downloads out of every published image)
+/media/
+/downloads/

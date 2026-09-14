@@ -31,10 +31,18 @@ export const PUT = async (req: NextRequest, ctx: { params: { serviceType: string
   if (!parsed.success)
     return NextResponse.json({ error: "ValidationError", details: parsed.error.flatten() }, { status: 400 });
 
-  if (serviceType === "NZBGET" && (!parsed.data.username || !parsed.data.password))
-    return NextResponse.json({ error: "NZBGet requires username and password" }, { status: 400 });
-  if (serviceType !== "NZBGET" && !parsed.data.apiKey)
+  // Credentials are only required the first time -- once saved, editing the
+  // URL or flipping `enabled` doesn't need them resent (upsertConnection
+  // preserves the existing secret when the input omits it).
+  const existing = await prisma.serverConnection.findUnique({ where: { serviceType } });
+  if (serviceType === "NZBGET") {
+    const hasUsername = !!parsed.data.username || !!existing?.username;
+    const hasPassword = !!parsed.data.password || !!existing?.password;
+    if (!hasUsername || !hasPassword)
+      return NextResponse.json({ error: "NZBGet requires username and password" }, { status: 400 });
+  } else if (!parsed.data.apiKey && !existing?.apiKey) {
     return NextResponse.json({ error: "An API key is required" }, { status: 400 });
+  }
 
   await upsertConnection(serviceType, parsed.data);
   return NextResponse.json({ ok: true });

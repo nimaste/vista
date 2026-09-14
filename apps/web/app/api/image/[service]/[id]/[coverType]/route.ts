@@ -58,15 +58,23 @@ export const GET = async (
 
   try {
     const upstream = await fetch(imageUrl);
-    if (!upstream.ok) {
+    if (!upstream.ok || !upstream.body) {
       return new NextResponse(null, { status: 404 });
     }
 
     const contentType = upstream.headers.get("content-type") || "image/jpeg";
-    const data = Buffer.from(await upstream.arrayBuffer());
-    imageCache.set(cacheKey, { data, contentType });
 
-    return new NextResponse(new Uint8Array(data), {
+    // Stream straight through to the client (first-load latency matters --
+    // buffering the whole image before responding, as an earlier version of
+    // this route did, made every never-before-seen poster slower, not
+    // faster). Tee the same bytes into the cache in the background so the
+    // *next* request for this image skips Sonarr/Radarr entirely.
+    const [clientStream, cacheStream] = upstream.body.tee();
+    new Response(cacheStream).arrayBuffer()
+      .then((buf) => imageCache.set(cacheKey, { data: Buffer.from(buf), contentType }))
+      .catch(() => {});
+
+    return new NextResponse(clientStream, {
       status: 200,
       headers: {
         "Content-Type": contentType,

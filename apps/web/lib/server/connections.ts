@@ -40,20 +40,37 @@ export type ConnectionInput = {
   enabled?: boolean;
 };
 
-/** Creates or updates the one connection for a service type. Encrypts apiKey/password. */
+/**
+ * Creates or updates the one connection for a service type. Encrypts
+ * apiKey/password. The web UI leaves those fields blank (masked as
+ * "••••••••") once a secret is already saved -- editing just the URL, or
+ * toggling `enabled`, must not wipe the previously saved secret out just
+ * because this call's input didn't resend it.
+ */
 export const upsertConnection = async (serviceType: ServiceType, input: ConnectionInput) => {
-  const data = {
+  const base = {
     name: input.name ?? null,
     baseUrl: input.baseUrl.replace(/\/+$/, ""),
-    apiKey: encryptSecretOrNull(input.apiKey),
     username: input.username ?? null,
-    password: encryptSecretOrNull(input.password),
     enabled: input.enabled ?? true,
   };
+
   return prisma.serverConnection.upsert({
     where: { serviceType },
-    create: { serviceType, ...data },
-    update: data,
+    create: {
+      serviceType,
+      ...base,
+      apiKey: encryptSecretOrNull(input.apiKey),
+      password: encryptSecretOrNull(input.password),
+    },
+    update: {
+      ...base,
+      // Only touch these when a real new value was actually provided --
+      // omitting the key entirely leaves Prisma's update untouched, unlike
+      // explicitly setting it to null.
+      ...(input.apiKey ? { apiKey: encryptSecretOrNull(input.apiKey) } : {}),
+      ...(input.password ? { password: encryptSecretOrNull(input.password) } : {}),
+    },
   });
 };
 

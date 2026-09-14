@@ -230,4 +230,15 @@ export const sonarr = {
       body: JSON.stringify({ guid: release.guid, indexerId: release.indexerId }),
     });
   },
+
+  // Plain "Search" -- Sonarr picks and grabs automatically using the
+  // series' own configured quality profile. Distinct from Interactive
+  // Search (getReleases/pushRelease above), which hands you the raw
+  // indexer results to choose from yourself.
+  searchEpisode: async (episodeId: number): Promise<void> => {
+    await sonarrFetch<void>("/command", {
+      method: "POST",
+      body: JSON.stringify({ name: "EpisodeSearch", episodeIds: [episodeId] }),
+    });
+  },
 };

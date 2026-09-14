@@ -39,6 +39,7 @@ const ConnectionCard = ({
   const [apiKey, setApiKey] = useState("");
   const [username, setUsername] = useState(summary?.username ?? "");
   const [password, setPassword] = useState("");
+  const [enabled, setEnabled] = useState(summary?.enabled ?? true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult>(null);
@@ -47,17 +48,18 @@ const ConnectionCard = ({
   useEffect(() => {
     setBaseUrl(summary?.baseUrl ?? "");
     setUsername(summary?.username ?? "");
-  }, [summary?.baseUrl, summary?.username]);
+    setEnabled(summary?.enabled ?? true);
+  }, [summary?.baseUrl, summary?.username, summary?.enabled]);
 
   const usesUserPass = usesUsernamePassword(serviceType);
   const hasCreds = usesUserPass ? summary?.hasPassword : summary?.hasApiKey;
 
-  const onSave = async () => {
+  const onSave = async (overrideEnabled?: boolean) => {
     setSaving(true);
     setSaveMsg("");
     setTestResult(null);
     try {
-      const body: Record<string, unknown> = { baseUrl };
+      const body: Record<string, unknown> = { baseUrl, enabled: overrideEnabled ?? enabled };
       if (usesUserPass) {
         if (username) body.username = username;
         if (password) body.password = password;
@@ -77,6 +79,12 @@ const ConnectionCard = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const onToggleEnabled = async () => {
+    const next = !enabled;
+    setEnabled(next);
+    await onSave(next);
   };
 
   const onTest = async () => {
@@ -108,15 +116,33 @@ const ConnectionCard = ({
 
   return (
     <div className="rounded-lg border border-border bg-card p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{title}</h2>
-        {summary?.lastTestOk !== null && summary?.lastTestOk !== undefined ? (
-          <span className={`text-xs font-medium ${summary.lastTestOk ? "text-green-500" : "text-red-500"}`}>
-            {summary.lastTestOk ? "Connected" : "Not connected"}
-          </span>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {summary?.lastTestOk !== null && summary?.lastTestOk !== undefined ? (
+            <span className={`text-xs font-medium ${summary.lastTestOk ? "text-green-500" : "text-red-500"}`}>
+              {summary.lastTestOk ? "Connected" : "Not connected"}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label={enabled ? `Disable ${title}` : `Enable ${title}`}
+            onClick={onToggleEnabled}
+            disabled={saving || !hasCreds}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${enabled ? "bg-primary" : "bg-muted"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${enabled ? "translate-x-[22px]" : "translate-x-0.5"}`}
+            />
+          </button>
+        </div>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      {!enabled ? (
+        <p className="mt-1 text-xs font-medium text-amber-500">Disabled — clients won&apos;t use this connection.</p>
+      ) : null}
 
       <div className="mt-4 space-y-3">
         <div>
@@ -180,7 +206,7 @@ const ConnectionCard = ({
         </button>
         <button
           type="button"
-          onClick={onSave}
+          onClick={() => onSave()}
           disabled={saving || !canSave}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
         >

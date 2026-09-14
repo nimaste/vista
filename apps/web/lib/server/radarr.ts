@@ -183,4 +183,15 @@ export const radarr = {
       body: JSON.stringify({ guid: release.guid, indexerId: release.indexerId }),
     });
   },
+
+  // Plain "Search" -- Radarr picks and grabs automatically using the
+  // movie's own configured quality profile. Distinct from Interactive
+  // Search (getReleases/pushRelease above), which hands you the raw
+  // indexer results to choose from yourself.
+  searchMovie: async (movieId: number): Promise<void> => {
+    await radarrFetch<void>("/command", {
+      method: "POST",
+      body: JSON.stringify({ name: "MoviesSearch", movieIds: [movieId] }),
+    });
+  },
 };
