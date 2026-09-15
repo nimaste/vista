@@ -52,7 +52,8 @@ export type OverseerrResult = {
   title?: string; // movie
   name?: string; // tv/person
   overview?: string;
-  posterPath?: string | null;
+  posterPath?: string | null; // movie/tv
+  profilePath?: string | null; // person -- TMDB's multi-search uses this field, not posterPath, for people
   releaseDate?: string; // movie
   firstAirDate?: string; // tv
   mediaInfo?: OverseerrMediaInfo;
@@ -80,6 +81,16 @@ export type OverseerrDetails = {
   watchProviders?: unknown;
 };
 
+export type OverseerrPersonDetails = {
+  id: number;
+  name: string;
+  biography?: string;
+  profilePath?: string | null;
+  birthday?: string | null;
+  placeOfBirth?: string | null;
+  knownForDepartment?: string;
+};
+
 export type OverseerrRequestStatus = {
   id: number;
   status: number; // 1 pending, 2 approved, 3 declined
@@ -97,7 +108,55 @@ export type OverseerrRequestPage = {
 const toImageUrl = (posterPath?: string | null): string | null =>
   posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : null;
 
-const withPosterUrl = (r: OverseerrResult) => ({ ...r, posterUrl: toImageUrl(r.posterPath) });
+const toBackdropUrl = (backdropPath?: string | null): string | null =>
+  backdropPath ? `https://image.tmdb.org/t/p/w780${backdropPath}` : null;
+
+const withPosterUrl = (r: OverseerrResult) => ({ ...r, posterUrl: toImageUrl(r.posterPath ?? r.profilePath) });
+
+export type OverseerrGenre = { id: number; name: string; backdropUrl: string | null };
+
+// Not an API-driven list -- Overseerr/Jellyseerr's own Discover homepage
+// renders these as fixed rows (StudioSlider/NetworkSlider), same ids every
+// install. Mirrored here rather than invented, so Vista's Discover tab
+// shows the identical set the user already knows from Seerr's own UI.
+export const STUDIOS = [
+  { id: 2, name: "Disney" },
+  { id: 127928, name: "20th Century Studios" },
+  { id: 34, name: "Sony Pictures" },
+  { id: 174, name: "Warner Bros. Pictures" },
+  { id: 33, name: "Universal" },
+  { id: 4, name: "Paramount" },
+  { id: 3, name: "Pixar" },
+  { id: 521, name: "Dreamworks" },
+  { id: 420, name: "Marvel Studios" },
+  { id: 9993, name: "DC" },
+  { id: 41077, name: "A24" },
+];
+
+export const NETWORKS = [
+  { id: 213, name: "Netflix" },
+  { id: 2739, name: "Disney+" },
+  { id: 1024, name: "Prime Video" },
+  { id: 2552, name: "Apple TV+" },
+  { id: 453, name: "Hulu" },
+  { id: 49, name: "HBO" },
+  { id: 4353, name: "Discovery+" },
+  { id: 2, name: "ABC" },
+  { id: 19, name: "FOX" },
+  { id: 359, name: "Cinemax" },
+  { id: 174, name: "AMC" },
+  { id: 67, name: "Showtime" },
+  { id: 318, name: "Starz" },
+  { id: 71, name: "The CW" },
+  { id: 6, name: "NBC" },
+  { id: 16, name: "CBS" },
+  { id: 4330, name: "Paramount+" },
+  { id: 4, name: "BBC One" },
+  { id: 56, name: "Cartoon Network" },
+  { id: 80, name: "Adult Swim" },
+  { id: 13, name: "Nickelodeon" },
+  { id: 3353, name: "Peacock" },
+];
 
 // -- Exported API --
 
@@ -131,6 +190,58 @@ export const overseerr = {
       return { ...data, results: data.results.map(withPosterUrl) };
     }),
 
+  discoverUpcomingMovies: (page = 1) =>
+    cached(`overseerr:discover:upcoming:movies:${page}`, 600, async () => {
+      const data = await overseerrFetch<OverseerrPage>(`/discover/movies/upcoming?page=${page}`);
+      return { ...data, results: data.results.map(withPosterUrl) };
+    }),
+
+  discoverUpcomingTv: (page = 1) =>
+    cached(`overseerr:discover:upcoming:tv:${page}`, 600, async () => {
+      const data = await overseerrFetch<OverseerrPage>(`/discover/tv/upcoming?page=${page}`);
+      return { ...data, results: data.results.map(withPosterUrl) };
+    }),
+
+  movieGenres: (): Promise<OverseerrGenre[]> =>
+    cached("overseerr:genres:movie", 3600, async () => {
+      const data = await overseerrFetch<{ id: number; name: string; backdrops: string[] }[]>(
+        "/discover/genreslider/movie",
+      );
+      return data.map((g) => ({ id: g.id, name: g.name, backdropUrl: toBackdropUrl(g.backdrops[0]) }));
+    }),
+
+  tvGenres: (): Promise<OverseerrGenre[]> =>
+    cached("overseerr:genres:tv", 3600, async () => {
+      const data = await overseerrFetch<{ id: number; name: string; backdrops: string[] }[]>(
+        "/discover/genreslider/tv",
+      );
+      return data.map((g) => ({ id: g.id, name: g.name, backdropUrl: toBackdropUrl(g.backdrops[0]) }));
+    }),
+
+  moviesByGenre: (genreId: number, page = 1) =>
+    cached(`overseerr:discover:movies:genre:${genreId}:${page}`, 600, async () => {
+      const data = await overseerrFetch<OverseerrPage>(`/discover/movies/genre/${genreId}?page=${page}`);
+      return { ...data, results: data.results.map(withPosterUrl) };
+    }),
+
+  tvByGenre: (genreId: number, page = 1) =>
+    cached(`overseerr:discover:tv:genre:${genreId}:${page}`, 600, async () => {
+      const data = await overseerrFetch<OverseerrPage>(`/discover/tv/genre/${genreId}?page=${page}`);
+      return { ...data, results: data.results.map(withPosterUrl) };
+    }),
+
+  moviesByStudio: (studioId: number, page = 1) =>
+    cached(`overseerr:discover:movies:studio:${studioId}:${page}`, 600, async () => {
+      const data = await overseerrFetch<OverseerrPage>(`/discover/movies/studio/${studioId}?page=${page}`);
+      return { ...data, results: data.results.map(withPosterUrl) };
+    }),
+
+  tvByNetwork: (networkId: number, page = 1) =>
+    cached(`overseerr:discover:tv:network:${networkId}:${page}`, 600, async () => {
+      const data = await overseerrFetch<OverseerrPage>(`/discover/tv/network/${networkId}?page=${page}`);
+      return { ...data, results: data.results.map(withPosterUrl) };
+    }),
+
   getDetails: async (mediaType: "movie" | "tv", tmdbId: number): Promise<OverseerrDetails & { posterUrl: string | null; backdropUrl: string | null }> => {
     const data = await overseerrFetch<OverseerrDetails>(`/${mediaType}/${tmdbId}`);
     return {
@@ -145,6 +256,33 @@ export const overseerr = {
       `/search?query=${encodeURIComponent(query)}&page=${page}`,
     );
     return { ...data, results: data.results.map(withPosterUrl) };
+  },
+
+  // Overseerr/Jellyseerr proxy TMDB's /person endpoints under the same
+  // API-key auth as everything else, so Vista never needs a direct TMDB key.
+  getPerson: async (personId: number) => {
+    const data = await overseerrFetch<OverseerrPersonDetails>(`/person/${personId}`);
+    return { ...data, profileUrl: toImageUrl(data.profilePath) };
+  },
+
+  getPersonCredits: async (personId: number) => {
+    const data = await overseerrFetch<{ cast: OverseerrResult[]; crew: OverseerrResult[] }>(
+      `/person/${personId}/combined_credits`,
+    );
+    // Cast + crew can both list the same title (e.g. actor who also
+    // produced) -- de-duplicate by (mediaType, id) so the filmography grid
+    // doesn't show a movie twice, and drop anything without a poster
+    // (talk-show appearances, shorts with no artwork) since the grid has
+    // nothing to render for those.
+    const seen = new Set<string>();
+    const combined = [...data.cast, ...data.crew].filter((r) => {
+      const key = `${r.mediaType}:${r.id}`;
+      if (seen.has(key) || !r.posterPath) return false;
+      seen.add(key);
+      return true;
+    });
+    combined.sort((a, b) => (b.releaseDate ?? b.firstAirDate ?? "").localeCompare(a.releaseDate ?? a.firstAirDate ?? ""));
+    return combined.map(withPosterUrl);
   },
 
   // Submits the request TO Overseerr -- Overseerr itself hands the approved
